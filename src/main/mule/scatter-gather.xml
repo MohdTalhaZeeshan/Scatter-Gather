@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="479730c0-c8f8-4b9c-938a-7f67a0e1c633" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="daaeec7d-faf5-4e9b-a9c0-a6b0dfcdf080" >
+		<db:my-sql-connection host="localhost" port="3306" user="root" password="12345" database="poc-1" />
+	</db:config>
+	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="090f6c61-6b91-4a2e-a35e-8b151120aabd" >
+		<http:request-connection host="api.openweathermap.org/data/2.5/weather?q=hyderabad&amp;appid=29d089b734ad5a0768d2b55f2cf31a09" port="80" />
+	</http:request-config>
+	<flow name="scatter-gatherFlow" doc:id="f54b2123-d56d-49ca-afce-5b48ea489c6e" >
+		<http:listener doc:name="Listener" doc:id="6467e1be-39b0-44dd-b793-a96e24a8195c" config-ref="HTTP_Listener_config" path="scatter"/>
+		<logger level="INFO" doc:name="Logger" doc:id="78829981-1b9d-418b-9391-74f76b86ca6b" message='#["Before starting scatter-gather :: " ++ now() as String]'/>
+		<scatter-gather doc:name="Scatter-Gather" doc:id="0cdefc35-977c-4673-9a31-013a5d8959aa" >
+			<route >
+				<http:request method="GET" doc:name="Request" doc:id="5f830256-037e-4387-a087-a87c215f3467" config-ref="HTTP_Request_configuration" url="http://api.openweathermap.org/data/2.5/weather?q=hyderabad&amp;appid=29d089b734ad5a0768d2b55f2cf31a09"/>
+				<ee:transform doc:name="Transform Message" doc:id="e0402c9d-5d77-4b80-a331-3f0fe5e6c3e8">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<logger level="INFO" doc:name="Logger" doc:id="0518b728-9876-46e0-9214-77a51b0dc225" message='#[" Time 1 target  :: " ++ now() as String]'/>
+			</route>
+			<route >
+				<db:select doc:name="Select" doc:id="f15c9b31-1824-4102-ac9d-291f95a5e649" config-ref="Database_Config">
+					<db:sql ><![CDATA[SELECT * FROM DOCTOR;]]></db:sql>
+				</db:select>
+				<ee:transform doc:name="Transform Message" doc:id="efbd447d-c6d4-43cb-a73b-28cf33567c02" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<logger level="INFO" doc:name="Logger" doc:id="88ec20e1-80e1-4aa2-8d0f-d1cd5e9fbd0c" message='#[" Time 2 target  :: " ++ now() as String]'/>
+			</route>
+		</scatter-gather>
+		<logger level="INFO" doc:name="Logger" doc:id="5cf57787-053e-4012-b1fc-708e9ca02591" message='#["After starting scatter-gather :: " ++ now() as String]'/>
+		<ee:transform doc:name="Transform Message" doc:id="675049c5-0e3b-490a-acd8-edfc020af8b6" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>
